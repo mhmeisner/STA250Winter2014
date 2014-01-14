@@ -66,8 +66,11 @@ sd(del) # same
 # now try all files! 
 del = system('bzip2 -dc /Users/matthewmeisner/Downloads/Delays1987_2013.tar.bz2|cut -f 15 -d,',intern=TRUE) 
 
-
 # or, could loop through the .csv files:
-del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/Delays1987_2013/1987.csv',intern=TRUE) 
+files = system('ls /Users/matthewmeisner/Downloads/Delays1987_2013',intern=TRUE)
+del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/Delays1987_2013/2012_March.csv',intern=TRUE) 
 head(del)
 length(del)
+colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2006.csv',1),',')[[1]])
+grepl('arrdelay',colnames)
+readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2010_May.csv',4)

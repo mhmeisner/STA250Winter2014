@@ -69,6 +69,7 @@ del = system('bzip2 -dc /Users/matthewmeisner/Downloads/Delays1987_2013.tar.bz2|
 # or, could loop through the .csv files:
 files = system('ls /Users/matthewmeisner/Downloads/Delays1987_2013',intern=TRUE)
 del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/Delays1987_2013/2012_March.csv',intern=TRUE) 
+
 head(del)
 length(del)
 colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/1990.csv',1),',')[[1]])
@@ -83,3 +84,65 @@ col_numbers = sapply(files,function(filename){
 	col_number
 })
 col_numbers
+
+
+some_files = files[1:2]
+tables = sapply(some_files,function(filename){
+	filepath = paste0('/Users/matthewmeisner/Downloads/Delays1987_2013/',filename)
+	# need to find what column we want, since it's annoyingly not the same in each file 
+	colnames = tolower(strsplit(readLines(filepath,1),',')[[1]])	
+	col_number = which(grepl('arr',colnames)&grepl('delay',colnames))[1] # get first column that has "arr" and "delay" in name (manual inspection of the files confirmed that this column is the one wewant, despite the monthly files having several variants of arr delay columns)	
+	shell_command = paste('cut -f',col_number,'-d,',filepath)
+	delays = system(shell_command,intern=TRUE)
+	table(delays[-1]) # -1 removes the column name
+})
+tables
+class(tables)
+
+
+# now need a function to merge the tables
+mergeFreqTable = function(tt,na.rm=FALSE){
+	# tt needs to be a list of tables to be merged
+	# returns a named integer vector; names are delay times and value are counts 
+	# na.rm deterines in NAs are included in the final table
+	
+	# first, find all the unique values in the table
+	all_names = unlist(lapply(tt,function(t){names(t)}))
+	unique_names = unique(all_names)
+	#master = numeric(length(unique_names))
+	#names(master) = unique_names
+	#for()
+	sapply(unique_names,function(delay){
+		sum(sapply(tt,function(t){t[delay]}),na.rm=T)
+	})
+	# need to add the NA remover
+	
+}
+
+m = mergeFreqTable(tables)
+class(m)
+m
+#  check that this works
+sum(m) ==sum(tables[[1]],tables[[2]])
+i = 'NA'
+sum(tables[[1]][i],tables[[2]][i])
+m[i]
+
+# next, need functions for mean, median, and sd from freq table
+meanFreqTable = function(t){
+	
+}
+
+medianFreqTable = function(t){
+	
+}
+
+sdFreqTable = function(t){
+	
+}
+
+
+# nextmethods to try
+2. freq table in shell (either looping over files  in R, or all at once in shell)
+3. read.csv in blocks in R
+4. should also try the current method (just using the shell to get the right column), but use pipe instead of system. could then update the freq table more often, perhaps? Not sure this would help...

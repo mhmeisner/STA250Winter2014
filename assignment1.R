@@ -86,8 +86,10 @@ col_numbers = sapply(files,function(filename){
 col_numbers
 
 
-some_files = files[1:2]
+some_files = files[1:4]
+system.time({
 tables = sapply(some_files,function(filename){
+	cat('currently working on file',filename,'\n')
 	filepath = paste0('/Users/matthewmeisner/Downloads/Delays1987_2013/',filename)
 	# need to find what column we want, since it's annoyingly not the same in each file 
 	colnames = tolower(strsplit(readLines(filepath,1),',')[[1]])	
@@ -96,9 +98,15 @@ tables = sapply(some_files,function(filename){
 	delays = system(shell_command,intern=TRUE)
 	table(delays[-1]) # -1 removes the column name
 })
+})
+  user   system  elapsed 
+ 546.233   25.236 1236.730 
 tables
 class(tables)
+length(tables)
+length(files)
 
+# would rm(tables) within the sapply loop matter?
 
 # now need a function to merge the tables
 mergeFreqTable = function(tt,na.rm=FALSE){
@@ -121,18 +129,22 @@ mergeFreqTable = function(tt,na.rm=FALSE){
 
 m = mergeFreqTable(tables)
 class(m)
-m
+sum(m)
 #  check that this works
 sum(m) ==sum(tables[[1]],tables[[2]])
 i = 'NA'
 sum(tables[[1]][i],tables[[2]][i])
 m[i]
 
+head(m)
+head(names(m))
+as.integer(names(m))
+names(m)
 # next, need functions for mean, median, and sd from freq table
 meanFreqTable = function(t){
-	
+	as.integer(names(t))*t/sum(t)
 }
-
+meanFreqTable(m)
 medianFreqTable = function(t){
 	
 }
@@ -146,3 +158,23 @@ sdFreqTable = function(t){
 2. freq table in shell (either looping over files  in R, or all at once in shell)
 3. read.csv in blocks in R
 4. should also try the current method (just using the shell to get the right column), but use pipe instead of system. could then update the freq table more often, perhaps? Not sure this would help...
+
+
+del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/2003.csv',intern=TRUE) 
+del
+del[1:50]
+mean(as.numeric(del),na.rm=T)
+readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2001.csv',4)
+
+del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/2003.csv',intern=TRUE) 
+colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2008_March.csv',1),',')[[1]])
+colnames[46]
+grepl('arr',colnames)&grepl('delay',colnames)
+
+lapply(strsplit(del[1:1000],'\"'),function(i){i[2]})
+del1
+
+substr(del[1],1,1)
+nchar(del[2])
+del[2]
+substr(de,6,6)

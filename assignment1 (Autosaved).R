@@ -69,8 +69,31 @@ del = system('bzip2 -dc /Users/matthewmeisner/Downloads/Delays1987_2013.tar.bz2|
 # or, could loop through the .csv files:
 files = system('ls /Users/matthewmeisner/Downloads/Delays1987_2013',intern=TRUE)
 del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/Delays1987_2013/2012_March.csv',intern=TRUE) 
+
 head(del)
 length(del)
-colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2006.csv',1),',')[[1]])
-grepl('arrdelay',colnames)
+colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/1990.csv',1),',')[[1]])
+grepl('arr',colnames)&grepl('delay',colnames)
 readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2010_May.csv',4)
+
+col_numbers = sapply(files,function(filename){
+	filepath = paste0('/Users/matthewmeisner/Downloads/Delays1987_2013/',filename)
+	# need to find what column we want, since it's annoyingly not the same in each file 
+	colnames = tolower(strsplit(readLines(filepath,1),',')[[1]])	
+	col_number = which(grepl('arr',colnames)&grepl('delay',colnames))[1] # get first column that has "arr" and "delay" in name (manual inspection of the files )	
+	col_number
+})
+col_numbers
+
+
+some_files = files[1:2]
+tables = sapply(some_files,function(filename){
+	filepath = paste0('/Users/matthewmeisner/Downloads/Delays1987_2013/',filename)
+	# need to find what column we want, since it's annoyingly not the same in each file 
+	colnames = tolower(strsplit(readLines(filepath,1),',')[[1]])	
+	col_number = which(grepl('arr',colnames)&grepl('delay',colnames))[1] # get first column that has "arr" and "delay" in name (manual inspection of the files )	
+	shell_command = paste('cut -f',col_number,'-d,',filepath)
+	delays = system(shell_command,intern=TRUE)
+	table(delays[-1]) # -1 removes the header
+})
+tables

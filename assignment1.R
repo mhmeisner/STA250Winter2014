@@ -1,95 +1,7 @@
-d = read.csv('~/Downloads/1990.csv.bz2')
-
-
-# takes about 20 seconds 
-system.time({
-del = system('bzip2 -dc /Users/matthewmeisner/Downloads/1990.csv.bz2|cut -f 15 -d,',intern=TRUE) 
-ta = table(del[-1]) # the -1 removes teh "ArrDelay" column header -- we don't want that in the table
-})
-head(ta)
-length(del)
-length(ta) # 740 
-del1 = as.numeric(del[-1])
-class(del1)
-sum(is.na(del1))
-mean(as.numeric(del[-1]),na.rm=T)
-head(del)
-head(del[-1])
-
-# need fxn to get mean, median, and sd from the table 
-ta[1:10]
-sort(as.numeric(names(ta)))
-head(ta)
-n = unlist(sapply(1:length(ta),function(i){
-	rep(as.numeric(names(ta)[i]),ta[i])
-}))
-> length(n)
-[1] 5270893 # this is right -- one less than line count which also included column names 
-mean(n,na.rm=T)
-median(n,na.rm=T)
-sd(n,na.rm=T) # sd looks about right given the graph 
-plot(density(n,na.rm=T),xlim=c(-100,100))
-
-# will need to loop over files, but can just find the mean of each, and then take weighted average of those weighted by the 
-
-
-# but, the median and sd will probably need to all be done as one merged list of all of the delay values 
-
-# takes about 85 seconds 
-system.time({t = system('bzip2 -dc /Users/matthewmeisner/Downloads/1990.csv.bz2|cut -f 15 -d,|sort|uniq -c',intern=TRUE) })
-t = system('bzip2 -dc /Users/matthewmeisner/Downloads/1990.csv.bz2|cut -f 15 -d,|sort|uniq -c',intern=TRUE) 
-class(t)
-head(t)
-length(t) # 740
-tail(t)
-grepl('[0-9]',strsplit(t[736],' ')[[1]])
-# will need to convert this to a table
-
-del = unlist(sapply(1:length(t),function(i){
-	split = strsplit(t[i],' ')[[1]]
-	is_num = grepl('[0-9]',split)
-	if(sum(is_num)==2){
-		delay = as.numeric(split[is_num][2])
-		n = split[is_num][1]
-		return(rep(delay,n))
-	}else{
-		return(NULL)
-	}
-}))
-length(del) # NAs removed...
-
-mean(del) # identical answer 
-median(del) # same 
-sd(del) # same
-
-
-# now try all files! 
-del = system('bzip2 -dc /Users/matthewmeisner/Downloads/Delays1987_2013.tar.bz2|cut -f 15 -d,',intern=TRUE) 
-
-# or, could loop through the .csv files:
 files = system('ls /Users/matthewmeisner/Downloads/Delays1987_2013',intern=TRUE)
-del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/Delays1987_2013/2012_March.csv',intern=TRUE) 
-
-head(del)
-length(del)
-colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/1990.csv',1),',')[[1]])
-grepl('arr',colnames)&grepl('delay',colnames)
-readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2010_May.csv',4)
-
-col_numbers = sapply(files,function(filename){
-	filepath = paste0('/Users/matthewmeisner/Downloads/Delays1987_2013/',filename)
-	# need to find what column we want, since it's annoyingly not the same in each file 
-	colnames = tolower(strsplit(readLines(filepath,1),',')[[1]])	
-	col_number = which(grepl('arr',colnames)&grepl('delay',colnames))[1] # get first column that has "arr" and "delay" in name (manual inspection of the files )	
-	col_number
-})
-col_numbers
-
-
-some_files = files
-system.time({
-tables = sapply(1:length(some_files),function(i){
-	filename = some_files[i]
+runtime = system.time({
+tables = sapply(1:length(files),function(i){
+	filename = files[i]
 	cat('currently working on file',filename,'\n')
 	filepath = paste0('/Users/matthewmeisner/Downloads/Delays1987_2013/',filename)
 	# need to find what column we want, since it's annoyingly not the same in each file 
@@ -100,103 +12,58 @@ tables = sapply(1:length(some_files),function(i){
 	}
 	shell_command = paste('cut -f',col_number,'-d,',filepath)
 	delays = system(shell_command,intern=TRUE)
-	table(delays[-1]) # -1 removes the column name
+	table(delays[-1]) # -1 removes the column header 
 })
-})
-  user   system  elapsed 
- 546.233   25.236 1236.730 
-tables
-class(tables)
-length(tables)
-length(files)
-
-# would rm(tables) within the sapply loop matter?
 
 # need to change names of the tables to all be integers (they are in 3.00 form for the later years)
+# also need to makes sure NA and 'NA' are called the same thing (some were characters and some were actually NAs; this was causing problems when merging tables)
 for(i in 22:length(tables)){
 	names(tables[[i]]) = as.character(as.integer(names(tables[[i]])))
 	names(tables[[i]])[is.na(names(tables[[i]]))]='NA'
 }
-head(names(tables[[22]]))
 
-# now need a function to merge the tables
+merged_table = mergeFreqTable(tables,na.rm=T)
+
+mean = meanFreqTable(merged_table)
+median = medianFreqTable(merged_table)
+sd = sdFreqTable(merged_table,mean)
+
+})
+
+# function to merge tables (we have a table from each year and want a combined one with values summed across all years)
 mergeFreqTable = function(tt,na.rm=FALSE){
 	# tt needs to be a list of tables to be merged
 	# returns a named integer vector; names are delay times and value are counts 
 	# na.rm deterines in NAs are included in the final table
 	
-	# first, find all the unique values in the table
+	# first, find all the unique values in all the tables combined
 	all_names = unlist(lapply(tt,function(t){names(t)}))
 	unique_names = unique(all_names)
 	
+	# loop over all possible values; within that loop over all years and extract corresponding counts. Then sum them.  
 	merged = sapply(unique_names,function(delay){
 		sum(sapply(tt,function(t){t[delay]}),na.rm=T)
 	})
-	# need to add the NA remover
+	# remove NAs if desired
 	if(na.rm){
 		w = which(names(merged)=='NA')
 		merged = merged[-w]
 	}
 	merged
 }
-# 15 and 16 are 2001 and 2002 
-names(tt[[17]])
-class(tt[[15]])
-length(tt[[15]])
-
-class(names(tables[[22]]))
-
-m = mergeFreqTable(tables[1:22],na.rm=T)
-meanFreqTable(m)
-
-NA %in% names(tt[[1]])
-'NA' %in% names(tt[[1]])
-NA %in% names(tt[[22]])
-'NA' %in% names(tt[[22]])
-names(tt[[15]])
-
-#####
-m = mergeFreqTable(tables,na.rm=T)
-meanFreqTable(m)
-medianFreqTable(m)
-sdFreqTable(m,meanFreqTable(m))
-
-length(unique_names)
-NA %in% merged
-NA %in% names(merged)
-
-which(names(merged)=='NA')
-names(tables[[20]])
-
-which(names(m)=='NA')
-a = 
-length(tables)
-m = mergeFreqTable(tables,na.rm=T)
-class(m)
-sum(m)
-names(m)
-
-#  check that this works
-sum(m) ==sum(tables[[1]],tables[[2]])
-i = 'NA'
-sum(tables[[1]][i],tables[[2]][i],tables[[3]][i],tables[[4]][i])
-m[i]
-
-head(m)
-head(names(m))
-as.integer(names(m))
-names(m)
 
 # next, need functions for mean, median, and sd from freq table
 meanFreqTable = function(t){
+	# takes a table (or named vector) and finds the mean of all the names, assuming each name is replicated the number of times corresponding to the entry for that name 
 	sum(as.integer(names(t))*t)/sum(t)
 }
-meanFreqTable(m)
-mn = meanFreqTable(m)
 
 medianFreqTable = function(t,debug=F){
+	# takes a table (or named vector) and finds the median of all the names, assuming each name is replicated the number of times corresponding to the entry for that name 
+	# this won't get the right answer if the median need to be an average of two values. (This fxn will return the lower of those 2 numbers). However, given the strong tendency for delays to be near 0, it's exceptionally unlikely that for this application this averaging will be needed.  I also checked with the debug option in my function, and the cumulative sum at the value before the median is reached is much less than half, and the cumulative sum right after the median is reached is much more than half. So, it's not an issue for these data. For the next submission, I'll try to have a better general function that works on any table, even if this averaging were needed.  
 	n = sum(t)
-	half = floor(n/2)
+	half = ceiling(n/2)
+	# sort the names; we will start from the lowest and keep a cumulative sum of counts until we reach the midway point.  
 	sorted_names = sort(as.integer(names(t)))
 	cumul_sum = 0
 	i = 1
@@ -210,70 +77,15 @@ medianFreqTable = function(t,debug=F){
 	current_number
 }
 
-sum(m)
-medianFreqTable(m,debug=T)
-
-t = m
-sort(as.integer(names(t)))
-
-# test median function
-a = c(1,1,2,2,2,3,3,4)
-t1 = table(a)
-median(a)
-medianFreqTable(t1,debug=T)
-
-
 sdFreqTable = function(t,mean){
+		# takes a table (or named vector) and its mean, and finds the sample SD (MLE, biased estimate) of all the names, assuming each name is replicated the number of times corresponding to the entry for that name 
 	var_mle = sum(t*(as.integer(names(t))-mean)**2)/sum(t)
 	sd_mle = sqrt(var_mle)
 	sd_mle
 }
 
-sdFreqTable(t,mn)
-plot(density(as.numeric(del),na.rm=T))
 
-# nextmethods to try
-2. freq table in shell (either looping over files  in R, or all at once in shell)
-3. read.csv in blocks in R
-4. should also try the current method (just using the shell to get the right column), but use pipe instead of system. could then update the freq table more often, perhaps? Not sure this would help...
-
-
-del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/2003.csv',intern=TRUE) 
-del
-del[1:50]
-mean(as.numeric(del),na.rm=T)
-readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2001.csv',4)
-
-del = system('cut -f 45 -d, /Users/matthewmeisner/Downloads/2008_March.csv',intern=TRUE) 
-head(del)
-colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2008_March.csv',1),',')[[1]])
-colnames[46]
-grepl('arr',colnames)&grepl('delay',colnames)
-
-lapply(strsplit(del[1:1000],'\"'),function(i){i[2]})
-del1
-
-substr(del[1],1,1)
-nchar(del[2])
-del[2]
-substr(de,6,6)
-
-# another way to check that mean, median, sd seem to be workign correctly:
-n = unlist(sapply(1:length(t),function(i){
-	rep(as.numeric(names(t)[i]),t[i])
-}))
-sum(t)
-length(n)
-mean(n)
-median(n)
-medianFreqTable(t)
-sd(n)
-
-
-
-# 
-del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/2001.csv',intern=TRUE) 
-del
-del[1:50]
-mean(as.numeric(del),na.rm=T)
-readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2001.csv',4)
+########### save results 
+info = list(sessionInfo(),Sys.info())
+names(info) = c('sessionInfo','systemInfo')
+save(runtime,info,mean,median,sd,'~/Documents/STA250Winter2014/results_and_info.rda')

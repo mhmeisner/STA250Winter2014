@@ -84,6 +84,21 @@ sdFreqTable = function(t,mean){
 	sd_mle
 }
 
+# get means by year! 
+means_1987_2000 = sapply(1:14,function(year){
+	meanFreqTable(mergeFreqTable(tables[year],na.rm=T))
+})
+means_2003_2007 = sapply(17:21,function(year){
+	meanFreqTable(mergeFreqTable(tables[year],na.rm=T))
+})
+monthly_files_2008_2012 = sapply(2008:2012,function(y){grepl(y,files)})
+means_2008_2012 = sapply(1:5,function(y){
+	w = which(monthly_files_2008_2012[,y])
+	meanFreqTable(mergeFreqTable(tables[w],na.rm=T))
+})
+yearly_mns = c(means_1987_2000,means_2003_2007,means_2008_2012)
+plot(yearly_mns,type='b',lwd=2,pch=19,xaxt='n',xlab='',ylab='Mean Arrival Delay (min)',main='Arrival Delays of Domestic Flights, 1987-2012')
+axis(1,at=1:length(yearly_mns),labels=c(1987:2000,2003:2012),las=2)
 
 ########### save results 
 info = list(sessionInfo(),Sys.info())

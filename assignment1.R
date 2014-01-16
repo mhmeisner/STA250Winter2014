@@ -86,14 +86,18 @@ col_numbers = sapply(files,function(filename){
 col_numbers
 
 
-some_files = files[1:4]
+some_files = files
 system.time({
-tables = sapply(some_files,function(filename){
+tables = sapply(1:length(some_files),function(i){
+	filename = some_files[i]
 	cat('currently working on file',filename,'\n')
 	filepath = paste0('/Users/matthewmeisner/Downloads/Delays1987_2013/',filename)
 	# need to find what column we want, since it's annoyingly not the same in each file 
-	colnames = tolower(strsplit(readLines(filepath,1),',')[[1]])	
-	col_number = which(grepl('arr',colnames)&grepl('delay',colnames))[1] # get first column that has "arr" and "delay" in name (manual inspection of the files confirmed that this column is the one wewant, despite the monthly files having several variants of arr delay columns)	
+	if(i<=21){
+		col_number = 15
+	}else{
+		col_number = 45 # this gets the "ARR_DEL15" column; the ARR_DELAY column values make no sense! but the ARR_DEL15 values *seem* reasonable...
+	}
 	shell_command = paste('cut -f',col_number,'-d,',filepath)
 	delays = system(shell_command,intern=TRUE)
 	table(delays[-1]) # -1 removes the column name
@@ -108,6 +112,12 @@ length(files)
 
 # would rm(tables) within the sapply loop matter?
 
+# need to change names of the tables to all be integers (they are in 3.00 form for the later years)
+for(i in 22:length(tables)){
+	names(tables[[i]]) = as.character(as.integer(names(tables[[i]])))
+}
+head(names(tables[[22]]))
+
 # now need a function to merge the tables
 mergeFreqTable = function(tt,na.rm=FALSE){
 	# tt needs to be a list of tables to be merged
@@ -117,42 +127,74 @@ mergeFreqTable = function(tt,na.rm=FALSE){
 	# first, find all the unique values in the table
 	all_names = unlist(lapply(tt,function(t){names(t)}))
 	unique_names = unique(all_names)
-	#master = numeric(length(unique_names))
-	#names(master) = unique_names
-	#for()
-	sapply(unique_names,function(delay){
+	
+	merged = sapply(unique_names,function(delay){
 		sum(sapply(tt,function(t){t[delay]}),na.rm=T)
 	})
 	# need to add the NA remover
-	
+	if(na.rm){
+		w = which(names(merged)=='NA')
+		merged = merged[-w]
+	}
+	merged
 }
 
-m = mergeFreqTable(tables)
+which(names(merged)=='NA')
+
+which(names(m)=='NA')
+a = 
+length(tables)
+m = mergeFreqTable(tables,na.rm=T)
 class(m)
 sum(m)
+names(m)
+
 #  check that this works
 sum(m) ==sum(tables[[1]],tables[[2]])
 i = 'NA'
-sum(tables[[1]][i],tables[[2]][i])
+sum(tables[[1]][i],tables[[2]][i],tables[[3]][i],tables[[4]][i])
 m[i]
 
 head(m)
 head(names(m))
 as.integer(names(m))
 names(m)
+
 # next, need functions for mean, median, and sd from freq table
 meanFreqTable = function(t){
-	as.integer(names(t))*t/sum(t)
+	sum(as.integer(names(t))*t)/sum(t)
 }
 meanFreqTable(m)
+mn = meanFreqTable(m)
+
 medianFreqTable = function(t){
-	
+	n = sum(t)
+	half = floor(n/2)
+	sorted_names = sort(as.integer(names(t)))
+	cumul_sum = 0
+	i = 1
+	while(cumul_sum<half){
+		current_number = sorted_names[i]
+		cumul_sum = cumul_sum + t[as.character(as.character(current_number))]
+		i = i+1
+	}
+	c(current_number, cumul_sum)
 }
 
-sdFreqTable = function(t){
-	
+medianFreqTable(m)
+t = m
+sort(as.integer(names(t)))
+
+
+
+sdFreqTable = function(t,mean){
+	var_mle = sum(t*(as.integer(names(t))-mean)**2)/sum(t)
+	sd_mle = sqrt(var_mle)
+	sd_mle
 }
 
+sdFreqTable(t,mn)
+plot(density(as.numeric(del),na.rm=T))
 
 # nextmethods to try
 2. freq table in shell (either looping over files  in R, or all at once in shell)
@@ -166,7 +208,8 @@ del[1:50]
 mean(as.numeric(del),na.rm=T)
 readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2001.csv',4)
 
-del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/2003.csv',intern=TRUE) 
+del = system('cut -f 45 -d, /Users/matthewmeisner/Downloads/2008_March.csv',intern=TRUE) 
+head(del)
 colnames = tolower(strsplit(readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2008_March.csv',1),',')[[1]])
 colnames[46]
 grepl('arr',colnames)&grepl('delay',colnames)
@@ -178,3 +221,23 @@ substr(del[1],1,1)
 nchar(del[2])
 del[2]
 substr(de,6,6)
+
+# another way to check that mean, median, sd seem to be workign correctly:
+n = unlist(sapply(1:length(t),function(i){
+	rep(as.numeric(names(t)[i]),t[i])
+}))
+sum(t)
+length(n)
+mean(n)
+median(n)
+medianFreqTable(t)
+sd(n)
+
+
+
+# 
+del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/2001.csv',intern=TRUE) 
+del
+del[1:50]
+mean(as.numeric(del),na.rm=T)
+readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/2001.csv',4)

@@ -115,6 +115,7 @@ length(files)
 # need to change names of the tables to all be integers (they are in 3.00 form for the later years)
 for(i in 22:length(tables)){
 	names(tables[[i]]) = as.character(as.integer(names(tables[[i]])))
+	names(tables[[i]])[is.na(names(tables[[i]]))]='NA'
 }
 head(names(tables[[22]]))
 
@@ -138,8 +139,34 @@ mergeFreqTable = function(tt,na.rm=FALSE){
 	}
 	merged
 }
+# 15 and 16 are 2001 and 2002 
+names(tt[[17]])
+class(tt[[15]])
+length(tt[[15]])
+
+class(names(tables[[22]]))
+
+m = mergeFreqTable(tables[1:22],na.rm=T)
+meanFreqTable(m)
+
+NA %in% names(tt[[1]])
+'NA' %in% names(tt[[1]])
+NA %in% names(tt[[22]])
+'NA' %in% names(tt[[22]])
+names(tt[[15]])
+
+#####
+m = mergeFreqTable(tables,na.rm=T)
+meanFreqTable(m)
+medianFreqTable(m)
+sdFreqTable(m,meanFreqTable(m))
+
+length(unique_names)
+NA %in% merged
+NA %in% names(merged)
 
 which(names(merged)=='NA')
+names(tables[[20]])
 
 which(names(m)=='NA')
 a = 
@@ -167,24 +194,33 @@ meanFreqTable = function(t){
 meanFreqTable(m)
 mn = meanFreqTable(m)
 
-medianFreqTable = function(t){
+medianFreqTable = function(t,debug=F){
 	n = sum(t)
 	half = floor(n/2)
 	sorted_names = sort(as.integer(names(t)))
 	cumul_sum = 0
 	i = 1
 	while(cumul_sum<half){
+		if(debug){cat('cumulative sum so far is:',cumul_sum,'\n')}
 		current_number = sorted_names[i]
-		cumul_sum = cumul_sum + t[as.character(as.character(current_number))]
+		cumul_sum = cumul_sum + t[as.character(current_number)]
 		i = i+1
 	}
-	c(current_number, cumul_sum)
+	if(debug){cat('cumulative sum after final bin is:',cumul_sum,'\n')}
+	current_number
 }
 
-medianFreqTable(m)
+sum(m)
+medianFreqTable(m,debug=T)
+
 t = m
 sort(as.integer(names(t)))
 
+# test median function
+a = c(1,1,2,2,2,3,3,4)
+t1 = table(a)
+median(a)
+medianFreqTable(t1,debug=T)
 
 
 sdFreqTable = function(t,mean){

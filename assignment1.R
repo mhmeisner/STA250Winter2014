@@ -10,7 +10,7 @@ tables = sapply(1:length(files),function(i){
 	}else{
 		col_number = 45 # this gets the "ARR_DEL15" column; the ARR_DELAY column values make no sense! but the ARR_DEL15 values *seem* reasonable...
 	}
-	shell_command = paste('cut -f',col_number,'-d,',filepath)
+	shell_command = paste('export LANG=C; cut -f',col_number,'-d,',filepath)
 	delays = system(shell_command,intern=TRUE)
 	table(delays[-1]) # -1 removes the column header 
 })
@@ -85,10 +85,7 @@ sdFreqTable = function(t,mean){
 }
 
 # get means by year! 
-means_1987_2000 = sapply(1:14,function(year){
-	meanFreqTable(mergeFreqTable(tables[year],na.rm=T))
-})
-means_2003_2007 = sapply(17:21,function(year){
+means_1987_2007 = sapply(1:21,function(year){
 	meanFreqTable(mergeFreqTable(tables[year],na.rm=T))
 })
 monthly_files_2008_2012 = sapply(2008:2012,function(y){grepl(y,files)})
@@ -96,11 +93,29 @@ means_2008_2012 = sapply(1:5,function(y){
 	w = which(monthly_files_2008_2012[,y])
 	meanFreqTable(mergeFreqTable(tables[w],na.rm=T))
 })
-yearly_mns = c(means_1987_2000,means_2003_2007,means_2008_2012)
-plot(yearly_mns,type='b',lwd=2,pch=19,xaxt='n',xlab='',ylab='Mean Arrival Delay (min)',main='Arrival Delays of Domestic Flights, 1987-2012')
-axis(1,at=1:length(yearly_mns),labels=c(1987:2000,2003:2012),las=2)
+yearly_mns = c(means_1987_2007,means_2008_2012)
+par(mar=c(4,4,4,5))
+plot(yearly_mns,type='b',lwd=2,pch=19,xaxt='n',xlab='',ylab='Mean Arrival Delay (min)',main='Arrival Delays and Numbers of Domestic Flights, 1987-2012')
+axis(1,at=1:length(yearly_mns),labels=c(1987:2012),las=2)
+
+# also find number of flights in each year and add that to the graph 
+nflights_1987_2007 = sapply(1:21,function(year){
+	sum(mergeFreqTable(tables[year],na.rm=T))
+})
+monthly_files_2008_2012 = sapply(2008:2012,function(y){grepl(y,files)})
+nflights_2008_2012 = sapply(1:5,function(y){
+	w = which(monthly_files_2008_2012[,y])
+	sum(mergeFreqTable(tables[w],na.rm=T))
+})
+yearly_n = c(nflights_1987_2007,nflights_2008_2012)
+par(new=T)
+plot(yearly_n,type='b',lwd=2,lty=2,xaxt='n',xlab='',ylab='Mean Arrival Delay (min)',yaxt='n')
+axis(4)
+mtext('Number of Flights',side=4,outer=T)
+text(30,4.5e6,'Number of Flights',xpd=T,srt=90)
+legend('topleft',legend=c('Mean Delay','Number of Flights'),pch=c(19,1),lty=c(1,2),cex=.9)
 
 ########### save results 
 info = list(sessionInfo(),Sys.info())
 names(info) = c('sessionInfo','systemInfo')
-save(runtime,info,mean,median,sd,'~/Documents/STA250Winter2014/results_and_info.rda')
+save(runtime,info,mean,median,sd,file='~/Documents/STA250Winter2014/results_and_info.rda')

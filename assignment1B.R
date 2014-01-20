@@ -92,18 +92,19 @@ tables = sapply(1:length(files),function(i){
 	delays = del[seq(from=1,to=length(del)-1,by=2)]
 	counts = as.integer(del[seq(from=2,to=length(del),by=2)])
 	names(counts)=delays
-
+	counts
 })
 
 
 # testing for new format:
 # method 1:
-col_number=15
-t1 = table(system(paste('export LANG=C; cut -f',col_number,'-d,','/Users/matthewmeisner/Downloads/Delays1987_2013/2002.csv'),intern=TRUE))
-t1 = t1[-((length(t1)-1):length(t1))] # only works for first format - will need to remove the ARR_DELAY and NA differently for later 
+col_number=45
+t1 = system(paste('export LANG=C; cut -f',col_number,'-d,','/Users/matthewmeisner/Downloads/Delays1987_2013/2009_April.csv'),intern=TRUE)
+t1 = table(t1[-1])
+t1 = t1[-1]  #remove the NAs
 
-
-sh = paste('export LANG=C; cut -f',col_number,'-d,','/Users/matthewmeisner/Downloads/Delays1987_2013/2002.csv  |sort|uniq -c')
+# method 2:
+sh = paste('export LANG=C; cut -f',col_number,'-d,','/Users/matthewmeisner/Downloads/Delays1987_2013/2009_April.csv  |sort|uniq -c')
 t = system(sh,intern=T)
 
 # will need to convert this to a table
@@ -123,6 +124,18 @@ del = unlist(sapply(1:length(t),function(i){
 delays = del[seq(from=1,to=length(del)-1,by=2)]
 counts = as.integer(del[seq(from=2,to=length(del),by=2)])
 names(counts)=delays
-# these are the same for 2002.csv
+# these are the same for 2002.csv and 2009_April.csv
 meanFreqTable(t1)
 meanFreqTable(counts)
+
+# testing on all
+merged_table = mergeFreqTable(tables)
+meanFreqTable(merged_table) # 6.56
+medianFreqTable(merged_table) # 0
+sdFreqTable(merged_table,meanFreqTable(merged_table)) # 31.55
+
+# identical results to method 1!!!
+print(load('~/Documents/STA250Winter2014/results_and_info.rda'))
+mean
+median
+sd

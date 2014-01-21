@@ -168,3 +168,31 @@ t1 = system(paste('export LANG=C; cut -f',col_number,'-d,','/Users/matthewmeisne
 t1 = table(t1[-1])
 t1 = t1[-which(names(t1)=='NA')]  #remove the NAs
 meanFreqTable(t1) # 9.446699 same result! 
+head(t1)
+
+library(RPostgreSQL)
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname="postgres")
+dbGetQuery(con, "select count(*) from delays3")
+dbGetQuery(con, "select avg(arrdelay) from delays3")
+
+u = dbGetQuery(con, "SELECT DISTINCT arrdelay FROM delays3")
+
+
+
+sqrt(dbGetQuery(con, "select var_samp(arrdelay) from delays3"))
+
+# will need to get a frequency table for sd and median -- no built in commands 
+
+t = dbGetQuery(con, "SELECT count(*) FROM delays3 GROUP BY arrdelay")
+head(t)
+
+272 %in% t1
+
+# this matches for all the values I tried -- so the format for the frequency table created using GROUP BY has been deciphered. 
+head(u)
+head(t)
+i = sample(1:500,10)
+u[i,]
+t[i,]
+t1[as.character(u[i,])]

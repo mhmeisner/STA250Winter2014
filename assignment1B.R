@@ -139,3 +139,32 @@ print(load('~/Documents/STA250Winter2014/results_and_info.rda'))
 mean
 median
 sd
+
+
+
+# method 3
+1. remove later columns from files in shell
+2. read just as many columsn as necessary into R (in blocks), and make a tablew ithout ever storing the samples 
+
+
+readLines('~/Downloads/Delays1987_2013/1987.csv',2)
+
+
+CREATE TABLE delays2(year INT, month INT);
+
+CREATE TABLE delays3(year INT, month INT, day INT,dayofweek INT,deptime INT,crsdeptime INT,arrtime INT, crsarrtime INT,carrier character(10), flightnum INT,tailnum character(10),eltime float,crseltime float,airtime float, arrdelay INT,depdelay float,origin character(10), dest character(10),distance float,taxiin character(10),taxiout character(10),cancelled character(10),canccode character(10),diverted character(10),carrierdel character(10),weatherdel character(10), nasdelay character(10), secdelay character(10), ladelay character(10));
+
+
+\copy delays3 FROM '/Users/matthewmeisner/Downloads/Delays1987_2013/1987.csv'  DELIMITER ',' CSV HEADER null 'NA';
+
+
+select count(*) from delays3; 
+
+select avg(arrdelay) from delays3; # got: 9.4466990497746688
+
+# 
+col_number=15
+t1 = system(paste('export LANG=C; cut -f',col_number,'-d,','/Users/matthewmeisner/Downloads/Delays1987_2013/1987.csv'),intern=TRUE)
+t1 = table(t1[-1])
+t1 = t1[-which(names(t1)=='NA')]  #remove the NAs
+meanFreqTable(t1) # 9.446699 same result! 

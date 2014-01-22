@@ -254,7 +254,7 @@ dbGetQuery(con, "select avg(arrdelay) from delays1987to2007")
 CREATE TABLE delays2008to2012(arrdelay INT);
 system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays2008to2012(arrdelay FLOAT);"')
 dbRemoveTable(con,'delays2008to2012')
-cat 2008*.csv 2009*.csv 2010*.csv 2011*.csv 2012*.csv  | cut -f 45 -d,| grep -v ArrDelay | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays2008to2012 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';"
+cat 2008*.csv 2009*.csv 2010*.csv 2011*.csv 2012*.csv  | cut -f 45 -d,| grep -v ARR_DEL15 | sed 's/^$/NA/g' | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays2008to2012 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';" # took 12 minutes 
 
 cat 2008_April.csv | cut -f 45 -d,| grep -v ARR_DEL15 | sed 's/^$/NA/g' | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays2008to2012 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';"
 
@@ -278,4 +278,29 @@ system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays2008t
 dbGetQuery(con, "select count(*) from delays2008to2012")
 dbGetQuery(con, "select avg(arrdelay) from delays2008to2012")
 
-cat 2008_April.csv | cut -f 45 -d,|sed 's/^$/NA/g' |head
+cat 2008_April.csv | cut -f 45 -d,| grep -v ARR_DEL15 | sed 's/^$/NA/g' |head
+
+# try also getting carrier column and then grouping by that: 
+# or maybe all of the columns, at least from the first batch?
+
+
+
+dbRemoveTable(con,'delays1987to2007')
+system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays1987to2007(carrier CHARACTER(10), arrdelay FLOAT,origin CHARACTER(3),dest CHARACTER(3));"')
+cat 19*.csv 2000.csv 2001.csv 2002.csv 2003.csv 2004.csv 2005.csv 2006.csv 2007.csv | cut -f 9,15,17,18 -d,| grep -v ArrDelay | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays1987to2007 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';" # took about 18 minutes 
+
+dbRemoveTable(con,'delays2008to2012')
+system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays2008to2012(carrier CHARACTER(10),origin CHARACTER(3),dest CHARACTER(3), arrdelay FLOAT);"')
+cat 2008*.csv 2009*.csv 2010*.csv 2011*.csv 2012*.csv  | cut -f 9,15,25,45 -d,| grep -v ARR_DEL15 | sed 's/,$/,NA/g' | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays2008to2012 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';" # took 10 minutes 
+
+head 2008_April.csv | cut -f 9,15,25,45 -d,|sed 's/^$/NA/g'
+
+dbGetQuery(con, "select count(*) from delays1987to2007")
+dbGetQuery(con, "select avg(arrdelay) from delays1987to2007 GROUP BY carrier")
+dbGetQuery(con, "SELECT DISTINCT carrier FROM delays1987to2007")
+dbGetQuery(con, "select count(*) from delays2008to2012")
+dbGetQuery(con, "select avg(arrdelay) from delays2008to2012 GROUP BY carrier")
+dbGetQuery(con, "SELECT DISTINCT carrier FROM delays2008to2012")
+
+t1 = system(paste('export LANG=C; cut -f',25,'-d,','/Users/matthewmeisner/Downloads/Delays1987_2013/2008_April.csv'),intern=TRUE)
+# 9: carrier, 15: origin IATA code, 25: dest IATA code 

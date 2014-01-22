@@ -196,3 +196,86 @@ i = sample(1:500,10)
 u[i,]
 t[i,]
 t1[as.character(u[i,])]
+
+
+system('~/local/bin/psql -U matthewmeisner postgres; CREATE TABLE delays2(year INT, month INT);')
+
+
+CREATE TABLE delays4(year INT, month INT, day INT,dayofweek INT,deptime INT,crsdeptime INT,arrtime INT, crsarrtime INT,carrier character(10), flightnum INT,tailnum character(10),eltime float,crseltime float,airtime float, arrdelay INT,depdelay float,origin character(10), dest character(10),distance float,taxiin character(10),taxiout character(10),cancelled character(10),canccode character(10),diverted character(10),carrierdel character(10),weatherdel character(10), nasdelay character(10), secdelay character(10), ladelay character(10));
+
+
+
+ postgresqlBuildTableDefinition(con,'test', d,row.names=F)
+ dbGetQuery(con, "select count(*) from test")
+ 
+dbWriteTable(con,'test',d)
+
+
+dbWriteTable(con,'test',file('/Users/matthewmeisner/Downloads/Delays1987_2013/1987.csv','r'))
+ 
+ 
+ 
+d1 = readLines('/Users/matthewmeisner/Downloads/Delays1987_2013/1987.csv')
+ postgresqlBuildTableDefinition(con,'test', d,row.names=F) 
+d = read.csv('~/Downloads/Metamorphosis.csv')
+system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays4(year INT, month INT, day INT,dayofweek INT,deptime INT,crsdeptime INT,arrtime INT, crsarrtime INT,carrier character(10), flightnum INT,tailnum character(10),eltime float,crseltime float,airtime float, arrdelay INT,depdelay float,origin character(10), dest character(10),distance float,taxiin character(10),taxiout character(10),cancelled character(10),canccode character(10),diverted character(10),carrierdel character(10),weatherdel character(10), nasdelay character(10), secdelay character(10), ladelay character(10));"',intern=TRUE)
+system('~/local/bin/psql -U matthewmeisner postgres -c "\copy delays4 FROM /Users/matthewmeisner/Downloads/Delays1987_2013/1988.csv  DELIMITER , CSV HEADER null NA;"',intern=TRUE)
+
+
+
+u = dbGetQuery(con, "SELECT DISTINCT origin FROM delays3")
+
+
+cut -f 15 -d, 198*.csv| grep -v ArrDelay | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays5 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';"
+
+CREATE TABLE delays5(arrdelay INT);
+
+
+dbGetQuery(con, "select count(*) from delays6")
+dbGetQuery(con, "select avg(arrdelay) from delays5")
+ 
+ 
+ 
+system('wc -l /Users/matthewmeisner/Downloads/Delays1987_2013/200*.csv') # same number of rows as the above command!
+
+CREATE TABLE delays5(arrdelay INT);
+cat 19*.csv 2000.csv 2001.csv 2002.csv 2003.csv 2004.csv 2005.csv 2006.csv 2007.csv | cut -f 15 -d,| grep -v ArrDelay | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays5 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';"
+
+cat 1987.csv 1988.csv | cut -f 15 -d,| grep -v ArrDelay | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays6 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';"
+
+
+# final database creation:
+CREATE TABLE delays1987to2007(arrdelay INT);
+system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays1987to2007(arrdelay INT);"')
+cat 19*.csv 2000.csv 2001.csv 2002.csv 2003.csv 2004.csv 2005.csv 2006.csv 2007.csv | cut -f 15 -d,| grep -v ArrDelay | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays1987to2007 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';" # took 11 minutes 
+dbGetQuery(con, "select count(*) from delays1987to2007")
+dbGetQuery(con, "select avg(arrdelay) from delays1987to2007")
+
+CREATE TABLE delays2008to2012(arrdelay INT);
+system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays2008to2012(arrdelay FLOAT);"')
+dbRemoveTable(con,'delays2008to2012')
+cat 2008*.csv 2009*.csv 2010*.csv 2011*.csv 2012*.csv  | cut -f 45 -d,| grep -v ArrDelay | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays2008to2012 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';"
+
+cat 2008_April.csv | cut -f 45 -d,| grep -v ARR_DEL15 | sed 's/^$/NA/g' | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays2008to2012 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';"
+
+r = readLines('~/Downloads/Delays1987_2013/2008_April.csv', n=5)
+
+r = readLines('~/Downloads/Delays1987_2013/1988.csv', n=5)
+
+strsplit(r[1],',')[[1]][45]
+
+# different things about later format
+1. column header is different
+2. need different column
+3. NAs are blanks 
+
+t1 = system(paste('export LANG=C; cut -f',45,'-d,','/Users/matthewmeisner/Downloads/Delays1987_2013/2008_April.csv'),intern=TRUE)
+unique(t1)
+
+# try with character
+dbRemoveTable(con,'delays2008to2012')
+system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays2008to2012(arrdelay float);"')
+dbGetQuery(con, "select count(*) from delays2008to2012")
+dbGetQuery(con, "select avg(arrdelay) from delays2008to2012")
+
+cat 2008_April.csv | cut -f 45 -d,|sed 's/^$/NA/g' |head

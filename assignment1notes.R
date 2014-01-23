@@ -274,6 +274,19 @@ medianFreqTable(t)
 sd(n)
 
 # 
+
+system("head /Users/matthewmeisner/Downloads/2001.csv | sed -e 's/\xe4\xe6//g'  | cut -f 15 -d ,",intern=TRUE)
+system("head /Users/matthewmeisner/Downloads/2001.csv| cut -f 15 -d ,",intern=TRUE)
+system('export LANG=C')
+system('export LC_CTYPE=C')
+
+
+system('export LANG=C; head /Users/matthewmeisner/Downloads/2001.csv| cut -f 15 -d ,',intern=TRUE)
+del = system('export LANG=C; cut -f 15 -d , /Users/matthewmeisner/Downloads/1987.csv',intern=TRUE)
+head(del)
+system('head /Users/matthewmeisner/Downloads/2001.csv| cut -f 15 -d ,',intern=TRUE)
+
+
 del = system('cut -f 15 -d, /Users/matthewmeisner/Downloads/2001.csv',intern=TRUE) 
 del
 del[1:50]

@@ -79,6 +79,9 @@ sd2 = sdFreqTable(merged_table2,mean2)
 
 
 ##### Method 3: PostgreSQL Database 
+library(RPostgreSQL)
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname="postgres")
 # create table for first format of data (1987-2007)
 system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays1987to2007(carrier CHARACTER(10), arrdelay FLOAT,origin CHARACTER(3),dest CHARACTER(3));"')
 
@@ -91,69 +94,128 @@ system('~/local/bin/psql -U matthewmeisner postgres -c "CREATE TABLE delays2008t
 # run this in the shell: 
 cat 2008*.csv 2009*.csv 2010*.csv 2011*.csv 2012*.csv  | cut -f 9,15,25,45 -d,| grep -v ARR_DEL15 | sed 's/,$/,NA/g' | ~/local/bin/psql -U matthewmeisner postgres -c "COPY delays2008to2012 FROM STDIN DELIMITER ',' CSV HEADER null 'NA';" # took 10 minutes 
 
-runtime = 22*60+system.time({
-# mean - need to do weighted average of the two groups
+
+# mean - need to do weighted average of the means of the two - but see below for a more efficient way to do this, since I have to compute a frequency table in order to find the median anyway.  
 n1 = dbGetQuery(con, "select count(*) from delays1987to2007")
 m1 = dbGetQuery(con, "select avg(arrdelay) from delays1987to2007")
 n2 = dbGetQuery(con, "select count(*) from delays2008to2012")
 m2 = dbGetQuery(con, "select avg(arrdelay) from delays2008to2012")
-mean3 =(n1*m1+n2*m2)/(n2+n1)
+mean3 =(n1*m1+n2*m2)/(n1+n2)
 
+runtime3 = system.time({
 # will need to get a frequency table for sd and median -- no built in command for median, and no easy way to merge sd calculated separately on the two databases.  
+# get delays times:
 u1 = dbGetQuery(con, "SELECT DISTINCT arrdelay FROM delays1987to2007")
 u2 = dbGetQuery(con, "SELECT DISTINCT arrdelay FROM delays2008to2012")
+# get counts of said delay times:
 t1 = dbGetQuery(con, "SELECT count(*) FROM delays1987to2007 GROUP BY arrdelay")
 t2 = dbGetQuery(con, "SELECT count(*) FROM delays2008to2012 GROUP BY arrdelay")
 
+# creates named numerics (i.e. tables) to be merged, so that we can find median and sd:
 tab1 = t1[,1]
 names(tab1) = u1[,1]
 tab2 = t2[,1]
 names(tab2) = u2[,1]
 
+# merge tables
 merged_table3 = mergeFreqTable(list(tab1,tab2),na.rm=T)
 
+# find median/sd
+mean3 = meanFreqTable(merged_table3)
 median3 = medianFreqTable(merged_table3)
 sd3 = sdFreqTable(merged_table3,mean3)
 })
 
-
-
-
-
-
-
-
-dbGetQuery(con, "select count(*) from delays1987to2007")
-dbGetQuery(con, "select avg(arrdelay) from delays1987to2007 GROUP BY carrier")
-dbGetQuery(con, "SELECT DISTINCT carrier FROM delays1987to2007")
-dbGetQuery(con, "select count(*) from delays2008to2012")
-dbGetQuery(con, "select avg(arrdelay) from delays2008to2012 GROUP BY carrier")
-dbGetQuery(con, "SELECT DISTINCT carrier FROM delays2008to2012")
-dbGetQuery(con, "select count(*) from delays2008to2012 GROUP BY carrier")
-dbGetQuery(con, "select count(*) from delays2008to2012 WHERE origin = 'LAX'")
-dbGetQuery(con, "select count(*) from delays2008to2012 WHERE origin = 'ATL' GROUP BY carrier")
-dbGetQuery(con, "SELECT DISTINCT carrier FROM delays2008to2012 WHERE origin = 'ATL'")
-
-dbGetQuery(con, "select avg(arrdelay) from delays2008to2012 WHERE dest = 'SFO' GROUP BY carrier")
-dbGetQuery(con, "SELECT DISTINCT carrier FROM delays2008to2012 WHERE dest = 'SFO'")
-dbGetQuery(con, "select avg(arrdelay) from delays2008to2012 GROUP BY carrier")
-
-
-dbGetQuery(con, "select avg(arrdelay) from delays2008to2012 WHERE dest = 'SFO'")
-dbGetQuery(con, "select avg(arrdelay) from delays2008to2012 WHERE dest = 'OAK'")
-dbGetQuery(con, "select avg(arrdelay) from delays2008to2012 WHERE dest = 'SJC'")
-
 ##### make plots of summary statistics and times
 
-par(mfrow=c(1,3))
-plot(c(mean1,mean2,mean3),pch=19,cex=1.2,xaxt='n',xlab='',main='Mean Arrival Delay',ylab='Mean Arrival Delay (minutes)')
-axis(1,c(1,2,3),c('Method 1','Method 2','Method 3'))
-plot(c(median1,median2,median3),pch=19,cex=1.2,xaxt='n',xlab='',main='Median Arrival Delay',ylab='Median Arrival Delay (minutes)')
-axis(1,c(1,2,3),c('Method 1','Method 2','Method 3'))
-plot(c(sd1,sd2,sd3),pch=19,cex=1.2,xaxt='n',xlab='',main='Std Dev of Arrival Delay',ylab='Std Dev of Arrival Delay (minutes)')
-axis(1,c(1,2,3),c('Method 1','Method 2','Method 3'))
+par(mfrow=c(1,3),xpd=T)
+plot(unlist(c(mean1,mean2,mean3)),pch=19,cex=1.2,xaxt='n',xlab='',main='Mean Arrival Delay',ylab='Estimated Mean Arrival Delay (minutes)')
+axis(1,c(1,2,3),c('Shell Column','Shell Table','Postgres'))
+plot(c(median1,median2,median3),pch=19,cex=1.2,xaxt='n',xlab='',main='Median Arrival Delay',ylab='Estimated Median Arrival Delay (minutes)')
+axis(1,c(1,2,3),c('Shell Column','Shell Table','Postgres'))
+plot(c(sd1,sd2,sd3),pch=19,cex=1.2,xaxt='n',xlab='',main='Std Dev of Arrival Delay',ylab='Estimated Std Dev of Arrival Delay (minutes)')
+axis(1,c(1,2,3),c('Shell Column','Shell Table','Postgres'))
+
+plot(c(runtime1[3],runtime2[3],runtime3[3]),ylim=c(0,1800),xaxt='n',xlab='Method',pch=19,cex=1.2,ylab='Time (seconds)',main='Runtimes to Compute Summary Statistics')
+axis(1,c(1,2,3),c('Shell Extract Column','Shell Freq Table','Postgres'))
+points(3,runtime3[3]+22*60,cex=1.2)
+text(2.6,1700,'Includes Database \n Loading Time')
+text(2.6,350,'Time After \n Database Loaded')
+
+############## Make some extra/fun plots:
+# get means by year! 
+means_1987_2007 = sapply(1:21,function(year){
+	meanFreqTable(mergeFreqTable(tables[year],na.rm=T))
+})
+monthly_files_2008_2012 = sapply(2008:2012,function(y){grepl(y,files)})
+means_2008_2012 = sapply(1:5,function(y){
+	w = which(monthly_files_2008_2012[,y])
+	meanFreqTable(mergeFreqTable(tables[w],na.rm=T))
+})
+yearly_mns = c(means_1987_2007,means_2008_2012)
+par(mar=c(4,4,4,5))
+plot(yearly_mns,type='b',lwd=2,pch=19,xaxt='n',xlab='',ylab='Mean Arrival Delay (min)',main='Arrival Delays and Numbers of Domestic Flights, 1987-2012')
+axis(1,at=1:length(yearly_mns),labels=c(1987:2012),las=2)
+
+# also find number of flights in each year and add that to the graph 
+nflights_1987_2007 = sapply(1:21,function(year){
+	sum(mergeFreqTable(tables[year],na.rm=T))
+})
+monthly_files_2008_2012 = sapply(2008:2012,function(y){grepl(y,files)})
+nflights_2008_2012 = sapply(1:5,function(y){
+	w = which(monthly_files_2008_2012[,y])
+	sum(mergeFreqTable(tables[w],na.rm=T))
+})
+yearly_n = c(nflights_1987_2007,nflights_2008_2012)
+par(new=T)
+plot(yearly_n,type='b',lwd=2,lty=2,xaxt='n',xlab='',ylab='Mean Arrival Delay (min)',yaxt='n')
+axis(4)
+mtext('Number of Flights',side=4,outer=T)
+text(30,4.5e6,'Number of Flights',xpd=T,srt=90)
+legend('topleft',legend=c('Mean Delay','Number of Flights'),pch=c(19,1),lty=c(1,2),cex=.9)
+
+# look at delays by carrier
+bc_mean = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 GROUP BY carrier")[,1]
+bc_sd = sqrt(dbGetQuery(con, "SELECT VARIANCE(arrdelay) FROM delays2008to2012 GROUP BY carrier")[,1])
+bc_count = dbGetQuery(con, "SELECT COUNT(*) FROM delays2008to2012 GROUP BY carrier")[,1] 
+bc_se = bc_sd/sqrt(bc_count)
+c = dbGetQuery(con, "SELECT DISTINCT carrier FROM delays2008to2012")
+c = gsub(' ','',c[,1])
+# airlines to look at: FL (AirTran), US (US Airways), B6 (JetBlue),AA (American),UA (United), WN (Southwest), DL (Delta), F9 (frontier)
+airlines = c('FL','US','B6','AA','UA','WN','DL','F9')
+s = sapply(airlines,function(a){
+	c(bc_mean[c==a],bc_se[c==a])
+})
+
+o = order(s[1,])
+
+# std errors are too small to draw error bars...weird, maybe I did something wrong 
+col = brewer.pal(9,'Reds')[2:9]
+par(mar=c(5,4,4,8),xpd=T)
+plot(s[1,][o],1:8,xlab='Delay Time (Minutes)',yaxt='n',ylab='',main='2008-2012 Average Delays by Airline',pch=19,col=col)
+axis(2,at=1:8,airlines[o],las=2)
+legend(8,8,legend = c('B6: JetBLue','AA: American','F9: Frontier','FL: AirTran','UA: United','WN: Southwest','DL: Delta','US: US Airways'),cex=.7,pch=19,col=rev(col))
 
 
+sfo = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'SFO'")
+oak = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'OAK'")
+sjc = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'SJC'")
+smf = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'SMF'")
+lax = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'LAX'")
+jfk = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'JFK'")
+bos = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'BOS'")
+ord = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'ORD'")
+den = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'DEN'")
+mia = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'MIA'")
+slc = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'SLC'")
+dfw = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'DFW'")
+phx = dbGetQuery(con, "SELECT AVG(arrdelay) FROM delays2008to2012 WHERE dest = 'PHX'")
+
+# didn't quite have time to make a plot! 
+d = data.frame(delays = c(sfo[1,1],oak[1,1],sjc[1,1],smf[1,1],lax[1,1],jfk[1,1],bos[1,1],ord[1,1],den[1,1],mia[1,1],slc[1,1],dfw[1,1],phx[1,1]))
+d$grp = cut(d$delays,9)
+
+# plot bay area airports and delay times
 ##### functions for calculating summmary statistics from tables 
 
 # function to merge tables (we have a table from each year and want a combined one with values summed across all years)

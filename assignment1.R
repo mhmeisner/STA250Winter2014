@@ -1,3 +1,4 @@
+
 files = system('ls /Users/matthewmeisner/Downloads/Delays1987_2013',intern=TRUE)
 runtime = system.time({
 tables = sapply(1:length(files),function(i){

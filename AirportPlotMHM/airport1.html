@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+<script type="text/javascript"> var iata = "SFO"; </script>
+<script type="text/javascript"> var plottype = "dep"; </script>
+<script type="text/javascript">
+function showPlot(iata,plottype)
+{
+  var plot_two = document.getElementById('pngImage');
+  if(plot_two) {
+// Should test for file. But how. Cannot see the local file system!
+//     alert('cannot find the file for ' + filename + ' county.');
+     plot_two.src = iata +plottype+ '.png';
+  } else {
+     alert('cannot find the pngImage element in the HTML document.');
+  }
+}
+</script>
+</head>
+
+<body>
+<h1>Airline Data by Airport</h1>
+<p>
+Click on the red point corresponding to each airport to see data from that particular airport.  Use the radio button above the plot to toggle between: <br>
+1. Average number of daily departures at the airport by the 11 largest domestic air carriers. <br>
+2. Distributions of arrival delay times for the airlines serving that airport. <br><br>
+Note: to keep down the computational burden, only data from August of 2012 was used to make these graphs! 
+</p>
+
+<div id="map">
+<object style="float: left" type="image/svg+xml" data="airport1.svg" id="mapSVG" width="700" height="500">
+ SVG map seems unavailable
+</object>
+</div>
+<div>
+<input type="radio" checked  name = 'plottype' value="dep" onclick="plottype='dep'; showPlot(iata,plottype);"/>Show Departures By Airline<br>
+<input type="radio" name = 'plottype' value="del" onclick="plottype='del'; showPlot(iata,plottype);"/>Show Delays By Airline
+	
+
+</div>
+
+
+
+
+<div style="float: left" width="400" height="500">
+ <img src="bos.jpg" id="pngImage" width="500" />
+
+</div>
+
+<hr style="clear: both">
+<a href=mailto:mhmeisner@ucdavis.edu>&lt;mhmeisner@ucdavis.edu&gt;</a></address>
+<!-- hhmts start -->
+<!-- hhmts end -->
+</body> </html>
